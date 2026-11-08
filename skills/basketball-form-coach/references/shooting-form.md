@@ -25,6 +25,8 @@ Target ranges live in `rules.json`. "torso" = shoulder-to-hip length of the play
 | `elbow_alignment_ratio` | elbow vs wrist horizontal offset at set point, per shoulder width | front only |
 | `launch_angle_deg` | ball direction in the first 0.2 s after release | side, ball tracked |
 
+From behind the player (`view: back`) the geometry matches a front view for elbow alignment, drift, lean, release height and timing, but knee bend, elbow at set point and launch angle cannot be read, and left/right hands are not reliable.
+
 ## Faults → cue → drill
 
 **Not enough legs** (`knee_flex_min_deg` high, short rim misses)

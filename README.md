@@ -11,9 +11,9 @@ AI-powered motion analysis and coaching, packaged as agent skills.
 ## How it works
 
 ```
-video ──prepare──► N chunks ──extract (parallel, YOLO pose + ball)──► segment ──► events
+video ──prepare──► N chunks ──extract (parallel, YOLO pose + ball)──► people (pick the player) ──► segment ──► events
                                                                                   │
-          report.html ◄── coach notes ◄── aggregate ◄── analyze + visual review (parallel per event batch)
+   dashboard.html ◄── coach notes ◄── aggregate ◄── analyze + visual review (parallel per event batch)
 ```
 
 - Measurements (joint angles, timing, release height, ball launch angle) come from scripts, never from the LLM.

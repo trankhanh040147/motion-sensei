@@ -1,37 +1,283 @@
 {
   "_note": "Heuristic coaching ranges for youth/adult amateur players, 2D video. good = no comment needed, warn = mention, outside warn = flag. Views lists where the 2D measurement is trustworthy.",
   "shot": {
-    "knee_flex_min_deg":      {"label": "Knee bend at deepest dip", "unit": "deg", "good": [95, 135], "warn": [80, 150], "views": ["side", "oblique"],
-                               "low_cue": "Dipping very deep: wastes time, shot becomes slow", "high_cue": "Not enough leg bend: power comes from the arms"},
-    "elbow_set_deg":          {"label": "Elbow angle at set point", "unit": "deg", "good": [70, 105], "warn": [60, 120], "views": ["side"],
-                               "low_cue": "Ball pulled too far behind the head", "high_cue": "Arm already straightening before the set point (pushing the ball)"},
-    "elbow_release_deg":      {"label": "Elbow extension at release", "unit": "deg", "good": [155, 180], "warn": [140, 180], "views": ["side", "front", "oblique"],
-                               "low_cue": "Arm not fully extended at release (short-arming)"},
-    "release_height_torso":   {"label": "Release point above head", "unit": "torso", "good": [0.35, 1.2], "warn": [0.2, 1.4], "views": ["side", "front", "oblique"],
-                               "low_cue": "Low release: easy to block, flat arc"},
-    "dip_to_release_s":       {"label": "Time from dip to release", "unit": "s", "good": [0.25, 0.6], "warn": [0.18, 0.8], "views": ["side", "front", "oblique"],
-                               "low_cue": "Very rushed, legs and arms not linked", "high_cue": "Slow release / two-motion hitch"},
-    "release_vs_apex_s":      {"label": "Release timing vs top of jump", "unit": "s", "good": [-0.15, 0.06], "warn": [-0.25, 0.12], "views": ["side", "front", "oblique"],
-                               "low_cue": "Releasing early on the way up (fine for a one-motion shot if consistent)", "high_cue": "Releasing on the way down: power from legs lost"},
-    "trunk_lean_release_deg": {"label": "Body lean at release", "unit": "deg", "good": [0, 12], "warn": [0, 20], "views": ["side", "front", "oblique"],
-                               "high_cue": "Leaning at release: balance and alignment suffer"},
-    "landing_drift_torso":    {"label": "Drift between take-off and landing", "unit": "torso", "good": [0, 0.45], "warn": [0, 0.8], "views": ["side", "front"],
-                               "high_cue": "Drifting in the air: inconsistent distance/direction"},
-    "follow_through_s":       {"label": "Follow-through hold", "unit": "s", "good": [0.3, 3], "warn": [0.15, 3], "views": ["side", "front", "oblique"],
-                               "low_cue": "Pulling the arm down too fast after release"},
-    "elbow_alignment_ratio":  {"label": "Elbow under the ball (front view)", "unit": "shoulder", "good": [0, 0.3], "warn": [0, 0.45], "views": ["front"],
-                               "high_cue": "Elbow flares out: ball travels sideways"},
-    "launch_angle_deg":       {"label": "Ball launch angle", "unit": "deg", "good": [45, 58], "warn": [40, 62], "views": ["side"],
-                               "low_cue": "Flat arc: smaller target at the rim", "high_cue": "Very high arc: hard to control distance"}
+    "knee_flex_min_deg": {
+      "label": "Knee bend at deepest dip",
+      "unit": "deg",
+      "good": [
+        95,
+        135
+      ],
+      "warn": [
+        80,
+        150
+      ],
+      "views": [
+        "side",
+        "oblique"
+      ],
+      "low_cue": "Dipping very deep: wastes time, shot becomes slow",
+      "high_cue": "Not enough leg bend: power comes from the arms"
+    },
+    "elbow_set_deg": {
+      "label": "Elbow angle at set point",
+      "unit": "deg",
+      "good": [
+        70,
+        105
+      ],
+      "warn": [
+        60,
+        120
+      ],
+      "views": [
+        "side"
+      ],
+      "low_cue": "Ball pulled too far behind the head",
+      "high_cue": "Arm already straightening before the set point (pushing the ball)"
+    },
+    "elbow_release_deg": {
+      "label": "Elbow extension at release",
+      "unit": "deg",
+      "good": [
+        155,
+        180
+      ],
+      "warn": [
+        140,
+        180
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "low_cue": "Arm not fully extended at release (short-arming)"
+    },
+    "release_height_torso": {
+      "label": "Release point above head",
+      "unit": "torso",
+      "good": [
+        0.35,
+        1.2
+      ],
+      "warn": [
+        0.2,
+        1.4
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "low_cue": "Low release: easy to block, flat arc"
+    },
+    "dip_to_release_s": {
+      "label": "Time from dip to release",
+      "unit": "s",
+      "good": [
+        0.25,
+        0.6
+      ],
+      "warn": [
+        0.18,
+        0.8
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "low_cue": "Very rushed, legs and arms not linked",
+      "high_cue": "Slow release / two-motion hitch"
+    },
+    "release_vs_apex_s": {
+      "label": "Release timing vs top of jump",
+      "unit": "s",
+      "good": [
+        -0.15,
+        0.06
+      ],
+      "warn": [
+        -0.25,
+        0.12
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "low_cue": "Releasing early on the way up (fine for a one-motion shot if consistent)",
+      "high_cue": "Releasing on the way down: power from legs lost"
+    },
+    "trunk_lean_release_deg": {
+      "label": "Body lean at release",
+      "unit": "deg",
+      "good": [
+        0,
+        12
+      ],
+      "warn": [
+        0,
+        20
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "high_cue": "Leaning at release: balance and alignment suffer"
+    },
+    "landing_drift_torso": {
+      "label": "Drift between take-off and landing",
+      "unit": "torso",
+      "good": [
+        0,
+        0.45
+      ],
+      "warn": [
+        0,
+        0.8
+      ],
+      "views": [
+        "side",
+        "front",
+        "back"
+      ],
+      "high_cue": "Drifting in the air: inconsistent distance/direction"
+    },
+    "follow_through_s": {
+      "label": "Follow-through hold",
+      "unit": "s",
+      "good": [
+        0.3,
+        3
+      ],
+      "warn": [
+        0.15,
+        3
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "low_cue": "Pulling the arm down too fast after release"
+    },
+    "elbow_alignment_ratio": {
+      "label": "Elbow under the ball (front view)",
+      "unit": "shoulder",
+      "good": [
+        0,
+        0.3
+      ],
+      "warn": [
+        0,
+        0.45
+      ],
+      "views": [
+        "front",
+        "back"
+      ],
+      "high_cue": "Elbow flares out: ball travels sideways"
+    },
+    "launch_angle_deg": {
+      "label": "Ball launch angle",
+      "unit": "deg",
+      "good": [
+        45,
+        58
+      ],
+      "warn": [
+        40,
+        62
+      ],
+      "views": [
+        "side"
+      ],
+      "low_cue": "Flat arc: smaller target at the rim",
+      "high_cue": "Very high arc: hard to control distance"
+    }
   },
   "dribble": {
-    "frequency_hz":           {"label": "Dribble rate", "unit": "Hz", "good": [1.6, 4.5], "warn": [1.2, 6], "views": ["side", "front", "oblique"],
-                               "low_cue": "Slow, floaty dribble: easy to steal"},
-    "ball_peak_over_hip_torso": {"label": "Ball peak height vs hip", "unit": "torso", "good": [-0.6, 0.15], "warn": [-0.8, 0.35], "views": ["side", "front", "oblique"],
-                               "high_cue": "Dribbling too high (above the waist)"},
-    "knee_flex_mean_deg":     {"label": "Knee bend while dribbling", "unit": "deg", "good": [115, 158], "warn": [100, 168], "views": ["side", "oblique"],
-                               "high_cue": "Standing tall: not in an athletic stance"},
-    "trunk_lean_mean_deg":    {"label": "Forward lean while dribbling", "unit": "deg", "good": [8, 35], "warn": [3, 45], "views": ["side", "oblique"],
-                               "low_cue": "Too upright: hard to protect the ball", "high_cue": "Bent over the ball: head likely down"}
+    "frequency_hz": {
+      "label": "Dribble rate",
+      "unit": "Hz",
+      "good": [
+        1.6,
+        4.5
+      ],
+      "warn": [
+        1.2,
+        6
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "low_cue": "Slow, floaty dribble: easy to steal"
+    },
+    "ball_peak_over_hip_torso": {
+      "label": "Ball peak height vs hip",
+      "unit": "torso",
+      "good": [
+        -0.6,
+        0.15
+      ],
+      "warn": [
+        -0.8,
+        0.35
+      ],
+      "views": [
+        "side",
+        "front",
+        "oblique",
+        "back"
+      ],
+      "high_cue": "Dribbling too high (above the waist)"
+    },
+    "knee_flex_mean_deg": {
+      "label": "Knee bend while dribbling",
+      "unit": "deg",
+      "good": [
+        115,
+        158
+      ],
+      "warn": [
+        100,
+        168
+      ],
+      "views": [
+        "side",
+        "oblique"
+      ],
+      "high_cue": "Standing tall: not in an athletic stance"
+    },
+    "trunk_lean_mean_deg": {
+      "label": "Forward lean while dribbling",
+      "unit": "deg",
+      "good": [
+        8,
+        35
+      ],
+      "warn": [
+        3,
+        45
+      ],
+      "views": [
+        "side",
+        "oblique"
+      ],
+      "low_cue": "Too upright: hard to protect the ball",
+      "high_cue": "Bent over the ball: head likely down"
+    }
   }
 }

@@ -188,7 +188,8 @@ def analyze_shot(c: Ctx, ev: dict) -> tuple[list, dict, dict]:
                 mm.update(status="n/a", note="not used for layups")
                 mm.pop("cue", None)
     info = {"shot_kind": kind, "travel_torso": clean(travel), "one_foot_takeoff": one_foot,
-            "shooting_hand": "left" if side == "L" else "right", "jumped": jumped,
+            "shooting_hand": ("left" if side == "L" else "right") if v != "back" else "unknown (back view)",
+            "jumped": jumped,
             "ankle_lift_torso": clean(lift), "view": v}
     keys = {"load": load, "set_point": setp, "release": r, "follow_through": follow}
     return ms, info, keys
@@ -300,7 +301,26 @@ def analyze_event(run: Run, c: Ctx, ev: dict, clip: bool) -> dict:
     edir = run.event_dir(ev["id"])
     edir.mkdir(parents=True, exist_ok=True)
     fn = analyze_shot if ev["type"] == "shot" else analyze_dribble
-    ms, info, keys = fn(c, ev)
+    # the player's size in frame changes with distance, so normalize by this event's own torso
+    st, en = ev["start_frame"], ev["end_frame"]
+    sho = np.nanmean(np.stack([c.kp[st:en + 1, L_SHO, :2], c.kp[st:en + 1, R_SHO, :2]]), axis=0)
+    hip = np.nanmean(np.stack([c.kp[st:en + 1, L_HIP, :2], c.kp[st:en + 1, R_HIP, :2]]), axis=0)
+    local = np.linalg.norm(sho - hip, axis=1)
+    run_torso, run_view = c.torso, c.view
+    if (~np.isnan(local)).sum() >= 5:
+        c.torso = float(np.nanmedian(local))
+    # camera angle for this event: facing away around the release => back view
+    if c.view in ("front", "oblique"):
+        r = ev.get("release_frame", (st + en) // 2)
+        w = slice(max(0, r - c.s(0.5)), min(c.F, r + c.s(0.3)))
+        body = (c.kp[w, L_SHO, 2] > 0.5) & (c.kp[w, R_SHO, 2] > 0.5)
+        if body.sum() >= 3 and (c.kp[w, NOSE, 2][body] > 0.5).mean() < 0.35:
+            c.view = "back"
+    try:
+        ms, info, keys = fn(c, ev)
+    finally:
+        torso_used, c.torso, c.view = c.torso, run_torso, run_view
+    info["torso_px"] = round(torso_used, 1)
     render(run, c, ev, keys, edir, clip)
     data = {"schema": "motion-sensei/metrics@1", "event": ev, "info": info,
             "key_frames": {k: {"frame": int(f), "t_s": c.t(f)} for k, f in keys.items()},

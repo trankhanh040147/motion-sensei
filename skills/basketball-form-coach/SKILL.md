@@ -36,16 +36,18 @@ Each command prints JSON. `prepare` and `segment` print `parallel_tasks`: one co
 
 1. **Prepare.** `ms prepare <video>`. Leave `--workers` at its default (= `max_concurrent_extract`, the GPU slots of this machine). Throughput is roughly `max_concurrent_extract × 10 fps` on Apple silicon, so estimate `frames / that` and tell the user the ETA. For videos longer than ~5 minutes, ask whether to analyze everything or a part (`--start S --end S`, seconds; report times stay in source-video time).
 2. **Fan out extraction.** Exactly one extractor per `parallel_tasks` entry; do not add more. This is pure compute: give it to the cheapest/fastest member. Brief: *"Run `<command>` from `<skill>/scripts`. If your shell tool has a timeout shorter than the ETA, run it in the background and poll `ms status --run-dir <R>` every few minutes. On timeout or crash, run the same command again (it resumes). Never use `--force`, never kill other workers' processes. Report the final JSON line."* Wait for all of them (`ms status` shows `pending_chunks` and progress).
-3. **Pick the player.** Run `ms people --run-dir R` and look at `R/people.jpg`. If only one group has real screen time, skip `--target`. Otherwise pick **every** row that shows the player (groups stay pure, so one player usually spans several rows; leave out rows that mix two people). Use the user's description ("purple #77", "black tank top"); if they gave none, show them `people.jpg` and ask. Never guess between two plausible players.
-   **Segment.** `ms segment --run-dir R --target <letters>`. Without `--target`, segment warns when 2+ people share the frame. Read `warnings` (view, ball visibility, athlete visibility). If 0 events, stop and tell the user why (see `references/filming-guide.md`).
-4. **Fan out analysis.** One analyst per `parallel_tasks` entry (default 3 events each; change with `segment --batch-size`). Analysts need vision. Give each the brief in "Analyst brief" below. They write only inside their own `events/<id>/` dirs, so they cannot conflict.
+3. **Pick the player.** Run `ms segment --run-dir R` first. If it does not warn about 2+ people (`multi_person_rate` < 0.15 in `events.json`), the video is effectively solo: keep that result and go to step 4. Otherwise run `ms people --run-dir R`, look at `R/people.jpg` and pick **every** row that shows the player (groups stay pure, so one player usually spans several rows; leave out rows that mix two people). Use the user's description ("purple #77", "black tank top"); if they gave none, show them `people.jpg` and ask. Never guess between two plausible players.
+   Then **re-segment**: `ms segment --run-dir R --target <letters>`. Read `warnings` (view, ball visibility, athlete visibility) and `rejected_candidates` in `events.json` (pick-ups, defending, catches dropped before review, each with a reason). If 0 events, stop and tell the user why (see `references/filming-guide.md`).
+4. **Fan out analysis.** One analyst task per `parallel_tasks` entry (default 3 events each; change with `segment --batch-size`). Analysts need vision. Give each the brief in "Analyst brief" below. They write only inside their own `events/<id>/` dirs, so they cannot conflict. If the harness caps team size (DSH: 8 members), do not spawn past it: hand each member that finishes the next pending batch (finished extractors make good analysts). `ms status` lists events still missing a review.
 5. **Aggregate.** `ms aggregate --run-dir R` → `summary.json`. Read it plus every `review.json`.
 6. **Coach notes.** Write `R/coach_notes.md` (format below), then run `ms aggregate` again to embed it in `report.html`.
 7. **Dashboard.** `ms dashboard --run-dir R` → `R/dashboard.html`: the video with a clickable timeline of every event (colour = confirmed issue / possible / good / invalid / not reviewed), per-event review, key frames, metrics with verdicts and a looping skeleton replay; 0.25×–2× speed and frame stepping. It opens straight from disk (no server, nothing uploaded) and works on partial runs, so it can be rebuilt any time. Reply to the user with the notes and the `dashboard.html` path (deep link to one event: `dashboard.html#shot_12`).
 
 **Stopping a run.** Tell every worker to stop and not retry, then `pkill -f "basketball-form-coach/scripts/"`. Nothing is lost: re-running the same commands later resumes. Do not launch detached/`setsid` processes; they outlive the team and keep the GPU busy.
 
-If the harness has no team (single agent), run `ms run-all <video>` (it parallelizes extraction/analysis with local processes), then do the analyst review yourself for each event, then steps 5–6.
+If the harness has no team (single agent), run `ms run-all <video>` (local processes for the parallel phases; it stops after `people` when several people are in frame, then re-run it with `--run-dir R --target <letters>`), then do the analyst review yourself for each event, then steps 5–7.
+
+**Re-running from segment** (new target, new filters) keeps extraction: move `events/` and `events.json` aside (do not delete the old reviews), then run from step 3.
 
 ## Analyst brief (copy into each analyst task)
 
@@ -74,6 +76,8 @@ Rank by: issue confirmed in reviews × share of shots affected × impact (leg po
 - Only report issues backed by a metric with `reliable: true` **and** not rejected in review, or by an analyst observation. A `reliable: false` metric may only be mentioned as approximate.
 - Pass every `warnings` entry from `segment`/`aggregate` on to the user (e.g. ball seen in 12% of frames → no arc/launch-angle feedback).
 - If a metric is `n/a`, say it was not measurable, never estimate it from the image.
+- Camera view is decided per event (`metrics.json.info.view`). From behind (`back`), knee bend, elbow at set point and launch angle are unreliable and the shooting hand is `unknown`; do not report them.
+- Values in torso units use each event's own torso length, but stay approximate (±15%) when the player moves toward or away from the camera.
 - Thresholds in `references/rules.json` are coaching heuristics for amateurs, not biomechanics standards. Pain or injury questions → recommend a coach or physio.
 
 ## References

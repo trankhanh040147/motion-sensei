@@ -196,6 +196,30 @@ def runs_of(mask: np.ndarray, merge_gap: int, min_len: int):
     return [(a, b) for a, b in out if b - a + 1 >= min_len]
 
 
+def vet_shot(kp, ball, torso, fps, s) -> str | None:
+    """Reason to drop a shot candidate, or None. Cheap checks that save analyst review time."""
+    r, F = s["release"], len(kp)
+    win = range(max(0, r - 3), min(F, r + 4))
+    hips = [mid(kp[f:f + 1], L_HIP, R_HIP)[0] for f in win]
+    shos = [mid(kp[f:f + 1], L_SHO, R_SHO)[0] for f in win]
+    if all(np.isnan(h).any() for h in hips):
+        return "player not visible at release"
+    tilts = [np.degrees(np.arctan2(abs(sh[0] - h[0]), h[1] - sh[1])) for h, sh in zip(hips, shos)
+             if not (np.isnan(h).any() or np.isnan(sh).any())]
+    if tilts and np.median(tilts) > 40:
+        return "bent over at 'release' (picking up or dribbling low)"
+    if s["evidence"] == "wrist_peak":
+        nose = kp[:, NOSE, 1]
+        body_x = mid(kp[r:r + 1], L_SHO, R_SHO)[0][0]
+        after = [f for f in range(r + 1, min(F, r + round(0.5 * fps)))
+                 if not np.isnan(ball[f, 1]) and not np.isnan(body_x) and abs(ball[f, 0] - body_x) < 1.5 * torso]
+        if len(after) >= 3:
+            ref = np.nanmedian(np.where(np.isnan(nose[after]), np.nan, nose[after]))
+            if not np.isnan(ref) and min(ball[f, 1] for f in after) > ref:
+                return "ball never rose above the head after 'release' (catch / hold)"
+    return None
+
+
 def detect_shots(kp, ball, torso, fps):
     F = len(kp)
     nose_y = kp[:, NOSE, 1].copy()
@@ -323,6 +347,11 @@ def main() -> None:
     sho_w = float(np.nanmedian(np.linalg.norm(kp[:, L_SHO, :2] - kp[:, R_SHO, :2], axis=1)))
     ratio = sho_w / torso
     view = "side" if ratio < 0.38 else ("front" if ratio > 0.5 else "oblique")
+    # front vs back look alike by shoulder width; the face tells them apart
+    body = (kp[:, L_SHO, 2] > 0.5) & (kp[:, R_SHO, 2] > 0.5)
+    face_rate = float((kp[body, NOSE, 2] > 0.5).mean()) if body.any() else 1.0
+    if view in ("front", "oblique") and face_rate < 0.35:
+        view = "back"
 
     ball = track_ball(frames, kp, torso, fps)
     person_rate = float((~np.isnan(kp[:, L_HIP, 0]) | ~np.isnan(kp[:, R_HIP, 0])).mean())
@@ -331,7 +360,15 @@ def main() -> None:
     events = []
     pre, post = round(1.5 * fps), round(1.0 * fps)
     blocked = np.zeros(F, bool)
-    for i, s in enumerate(detect_shots(kp, ball, torso, fps)):
+    candidates, rejected = detect_shots(kp, ball, torso, fps), []
+    kept = []
+    for s in candidates:
+        why = vet_shot(kp, ball, torso, fps, s)
+        if why:
+            rejected.append({"t_s": round(s["release"] / fps + off, 2), "evidence": s["evidence"], "reason": why})
+        else:
+            kept.append(s)
+    for i, s in enumerate(kept):
         st, en = max(0, s["release"] - pre), min(F - 1, s["release"] + post)
         blocked[st:en + 1] = True
         events.append({"id": f"shot_{i + 1:02d}", "type": "shot", "start_frame": st, "end_frame": en,
@@ -367,8 +404,9 @@ def main() -> None:
 
     out = {
         "schema": "motion-sensei/events@1",
+        "rejected_candidates": rejected,
         "target": args.target.upper() if args.target else None, "multi_person_rate": round(multi_rate, 3),
-        "view": view, "shoulder_torso_ratio": round(ratio, 3), "torso_px": round(torso, 1),
+        "view": view, "face_visible_rate": round(face_rate, 3), "shoulder_torso_ratio": round(ratio, 3), "torso_px": round(torso, 1),
         "athlete_visible_rate": round(person_rate, 3), "ball_visible_rate": round(ball_rate, 3),
         "warnings": warnings, "events": events,
         "analyst_tasks": [{"task": k, "events": b,
