@@ -38,16 +38,52 @@ def box_center(b):
     return np.array([(b[0] + b[2]) / 2, (b[1] + b[3]) / 2])
 
 
-def track_athlete(frames) -> np.ndarray:
-    """Pick the same person frame to frame (solo practice: usually the largest, most continuous)."""
+def target_mask(run: Run, letters: str) -> dict[int, set[int]]:
+    """Frame -> indices of detected persons whose clothing group is one of the chosen letters."""
+    path = run.dir / "appearance.npz"
+    if not path.exists():
+        raise SystemExit("--target needs `ms people --run-dir <R>` first")
+    groups = [g["id"] for g in read_json(run.dir / "people.json")["groups"]]
+    want = {x.strip().upper() for x in letters.split(",") if x.strip()}
+    unknown = want - set(groups)
+    if unknown:
+        raise SystemExit(f"unknown groups {sorted(unknown)}; available: {groups}")
+    a = np.load(path)
+    ok = np.isin(a["group"], [groups.index(x) for x in want])
+    allowed: dict[int, set[int]] = {}
+    for f, j in zip(a["frame"][ok], a["person"][ok]):
+        allowed.setdefault(int(f), set()).add(int(j))
+    return allowed
+
+
+def track_athlete(frames, allowed: dict[int, set[int]] | None = None) -> np.ndarray:
+    """Pick the same person frame to frame.
+
+    Without a target: the largest, most continuous person (fine for a truly solo video).
+    With a target: only persons in the chosen clothing groups; frames without them stay empty,
+    so the track never jumps to someone else.
+    """
     F = len(frames)
     kp = np.full((F, 17, 3), np.nan)
     prev = None
+    h_lo, h_hi = 0.0, 1e9
+    if allowed is not None:
+        # passers-by close to the camera can share the shirt colour but are far bigger in frame
+        hs = [frames[f]["persons"][j]["box"][3] - frames[f]["persons"][j]["box"][1]
+              for f, js in allowed.items() if frames[f] for j in js]
+        if hs:
+            med = float(np.median(hs))
+            h_lo, h_hi = 0.5 * med, 1.8 * med
     for f, rec in enumerate(frames):
         if not rec or not rec["persons"]:
             continue
+        cands = rec["persons"] if allowed is None else [
+            p for j, p in enumerate(rec["persons"])
+            if j in allowed.get(f, ()) and h_lo <= p["box"][3] - p["box"][1] <= h_hi]
+        if not cands:
+            continue
         best, best_s = None, -1e9
-        for p in rec["persons"]:
+        for p in cands:
             b = p["box"]
             h = max(b[3] - b[1], 1)
             s = h / 100.0 + p["conf"]
@@ -267,6 +303,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--batch-size", type=int, default=3, help="events per analyst task")
+    ap.add_argument("--target", help="clothing groups of the player from `ms people`, e.g. B,C,E")
     args = ap.parse_args()
 
     run = Run(args.run_dir)
@@ -274,7 +311,8 @@ def main() -> None:
     fps = m["fps"]
     off = float(m.get("time_offset_s", 0.0))
     frames = load_frames(run, m)
-    kp = clean_kp(track_athlete(frames), fps)
+    allowed = target_mask(run, args.target) if args.target else None
+    kp = clean_kp(track_athlete(frames, allowed), fps)
     F = len(kp)
 
     sho_mid, hip_mid = mid(kp, L_SHO, R_SHO), mid(kp, L_HIP, R_HIP)
@@ -312,6 +350,12 @@ def main() -> None:
     ids = [e["id"] for e in events]
     batches = [ids[i:i + args.batch_size] for i in range(0, len(ids), args.batch_size)]
     warnings = []
+    big = [sum(1 for q in r["persons"] if (q["box"][3] - q["box"][1]) > 0.5 * max(x["box"][3] - x["box"][1] for x in r["persons"]))
+           for r in frames if r and r["persons"]]
+    multi_rate = float(np.mean([n >= 2 for n in big])) if big else 0.0
+    if multi_rate > 0.15 and not args.target:
+        warnings.append(f"2+ people in {multi_rate:.0%} of frames and no --target: the skeleton may follow the wrong "
+                        "person; run `ms people`, pick the player's groups, re-run segment with --target")
     if person_rate < 0.6:
         warnings.append(f"athlete visible in only {person_rate:.0%} of frames")
     if ball_rate < 0.25:
@@ -323,6 +367,7 @@ def main() -> None:
 
     out = {
         "schema": "motion-sensei/events@1",
+        "target": args.target.upper() if args.target else None, "multi_person_rate": round(multi_rate, 3),
         "view": view, "shoulder_torso_ratio": round(ratio, 3), "torso_px": round(torso, 1),
         "athlete_visible_rate": round(person_rate, 3), "ball_visible_rate": round(ball_rate, 3),
         "warnings": warnings, "events": events,

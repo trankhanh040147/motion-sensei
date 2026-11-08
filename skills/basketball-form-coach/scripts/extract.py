@@ -20,7 +20,7 @@ import cv2
 from common import (BALL_CLASS, BALL_MODEL, POSE_MODEL, Run, accelerator_slot, model_path, pick_device,
                     write_json)
 
-MAX_PERSONS = 3
+MAX_PERSONS = 5
 PROGRESS_EVERY_S = 10
 
 

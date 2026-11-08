@@ -19,7 +19,8 @@ Every phase reads and writes files in one run dir. No phase needs another agent'
 |---|---|---|---|---|
 | 0 Prepare | lead | `ms prepare <video> [--workers N]` | `manifest.json`, `video.mp4` | - |
 | 1 Extract | extractor ×N | `ms extract --run-dir R --chunk i` | `chunks/i/frames.jsonl`, `DONE.json` | **yes, per chunk** |
-| 2 Segment | lead | `ms segment --run-dir R` | `timeline.npz`, `events.json` | - (seconds) |
+| 2a People | lead | `ms people --run-dir R` | `people.jpg` gallery of clothing groups A, B, C… | - (≈1 min CPU) |
+| 2 Segment | lead | `ms segment --run-dir R [--target B,D]` | `timeline.npz`, `events.json` | - (seconds) |
 | 3 Analyze + review | analyst ×M | `ms analyze --run-dir R --events a,b,c` then visual review | `events/<id>/metrics.json`, `keyframes.jpg`, `overlay.mp4`, **`review.json`** | **yes, per event batch** |
 | 4 Report | lead | `ms aggregate`, write `coach_notes.md`, `ms aggregate` again, `ms dashboard` | `summary.json`, `report.html`, `dashboard.html` | - |
 
@@ -35,7 +36,8 @@ Each command prints JSON. `prepare` and `segment` print `parallel_tasks`: one co
 
 1. **Prepare.** `ms prepare <video>`. Leave `--workers` at its default (= `max_concurrent_extract`, the GPU slots of this machine). Throughput is roughly `max_concurrent_extract × 10 fps` on Apple silicon, so estimate `frames / that` and tell the user the ETA. For videos longer than ~5 minutes, ask whether to analyze everything or a part (`--start S --end S`, seconds; report times stay in source-video time).
 2. **Fan out extraction.** Exactly one extractor per `parallel_tasks` entry; do not add more. This is pure compute: give it to the cheapest/fastest member. Brief: *"Run `<command>` from `<skill>/scripts`. If your shell tool has a timeout shorter than the ETA, run it in the background and poll `ms status --run-dir <R>` every few minutes. On timeout or crash, run the same command again (it resumes). Never use `--force`, never kill other workers' processes. Report the final JSON line."* Wait for all of them (`ms status` shows `pending_chunks` and progress).
-3. **Segment.** `ms segment --run-dir R`. Read `warnings` (view, ball visibility, athlete visibility). If 0 events, stop and tell the user why (see `references/filming-guide.md`).
+3. **Pick the player.** Run `ms people --run-dir R` and look at `R/people.jpg`. If only one group has real screen time, skip `--target`. Otherwise pick **every** row that shows the player (groups stay pure, so one player usually spans several rows; leave out rows that mix two people). Use the user's description ("purple #77", "black tank top"); if they gave none, show them `people.jpg` and ask. Never guess between two plausible players.
+   **Segment.** `ms segment --run-dir R --target <letters>`. Without `--target`, segment warns when 2+ people share the frame. Read `warnings` (view, ball visibility, athlete visibility). If 0 events, stop and tell the user why (see `references/filming-guide.md`).
 4. **Fan out analysis.** One analyst per `parallel_tasks` entry (default 3 events each; change with `segment --batch-size`). Analysts need vision. Give each the brief in "Analyst brief" below. They write only inside their own `events/<id>/` dirs, so they cannot conflict.
 5. **Aggregate.** `ms aggregate --run-dir R` → `summary.json`. Read it plus every `review.json`.
 6. **Coach notes.** Write `R/coach_notes.md` (format below), then run `ms aggregate` again to embed it in `report.html`.

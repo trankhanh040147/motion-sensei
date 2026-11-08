@@ -74,7 +74,7 @@ def build(run: Run) -> dict:
                         "count": len(i["events"]), "of": t["usable"], "cue": i.get("cue")})
     return {
         "title": Path(m["source"]).name, "duration": m["duration_s"], "fps": fps, "offset": off,
-        "view": ev.get("view"), "warnings": (summary or ev).get("warnings", []),
+        "view": ev.get("view"), "target": ev.get("target"), "warnings": (summary or ev).get("warnings", []),
         "notes_html": md_to_html(run.coach_notes.read_text()) if run.coach_notes.exists() else None,
         "top_issues": top, "events": events,
     }
@@ -162,7 +162,7 @@ const fmt = s => { s += D.offset; const m = Math.floor(s / 60); return m + ":" +
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const vis = () => D.events.filter(e => filter === "all" || e.state === filter || (filter.startsWith("issue:") && e.issues.some(i => i.key === filter.slice(6))));
 
-$("#meta").textContent = `${D.title} · ${fmt(D.duration - D.offset)} · camera: ${D.view || "?"}`;
+$("#meta").textContent = `${D.title} · ${fmt(D.duration - D.offset)} · camera: ${D.view || "?"}` + (D.target ? ` · player: groups ${D.target}` : "");
 const counts = {}; D.events.forEach(e => counts[e.state] = (counts[e.state] || 0) + 1);
 $("#counts").innerHTML = Object.keys(STATE).filter(k => counts[k]).map(k => `<span><span class="dot s-${k}"></span>${STATE[k]}: ${counts[k]}</span>`).join("");
 

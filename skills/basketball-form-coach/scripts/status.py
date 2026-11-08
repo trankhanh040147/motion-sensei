@@ -33,7 +33,10 @@ def main() -> None:
                           "next": [f"ms extract --run-dir {run.dir} --chunk {i}" for i in todo]}, indent=2))
         return
     if not run.events.exists():
-        print(json.dumps({"phase": "segment", "next": [f"ms segment --run-dir {run.dir}"]}))
+        nxt = [f"ms segment --run-dir {run.dir} --target <letters>"] if (run.dir / "people.json").exists() else \
+            [f"ms people --run-dir {run.dir}", "look at people.jpg, pick the player's groups",
+             f"ms segment --run-dir {run.dir} [--target <letters>]"]
+        print(json.dumps({"phase": "segment", "next": nxt}))
         return
     ev = read_json(run.events)
     pending, review = [], []
