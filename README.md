@@ -43,6 +43,6 @@ The output lands in `runs/<video>-<timestamp>/`. Open `dashboard.html` there to 
 | Purpose | Default | Override |
 |---|---|---|
 | Pose | `yolo11s-pose.pt` | `MS_POSE_MODEL` |
-| Ball | `yolo11s.pt` at 960px (COCO "sports ball") | `MS_BALL_MODEL=yolo11m.pt` (more accurate, ~3× slower) |
+| Ball | `yolo11s.pt` on a 640px crop around the player (COCO "sports ball") | `MS_BALL_MODEL=yolo11m.pt` (more accurate, ~3× slower) |
 
 On an M-series Mac (MPS) one worker processes about 25–30 frames/s.
