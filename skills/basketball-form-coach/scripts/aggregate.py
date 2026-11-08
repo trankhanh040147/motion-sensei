@@ -14,6 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
+from analyze import LAYUP_SKIP
 from common import Run, clean, read_json, write_json
 
 SEV = {"flag": 2, "warn": 1}
@@ -51,8 +52,10 @@ def summarize(run: Run) -> dict:
         if "*" in rej:
             excluded.append(e["id"])
         typ = e["type"]
-        if typ in ("jump_shot", "set_shot", "layup"):
-            typ = m["info"].get("shot_kind", "jump_shot")
+        if typ == "shot":
+            typ = (rv or {}).get("shot_kind") or m["info"].get("shot_kind", "jump_shot")
+            if typ == "layup":
+                rej = rej | LAYUP_SKIP
         per_type[typ].append((e, m, rv, rej))
 
     out = {"schema": "motion-sensei/summary@1", "view": ev_doc["view"], "warnings": list(ev_doc["warnings"]),

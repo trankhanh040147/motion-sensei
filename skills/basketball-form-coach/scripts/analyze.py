@@ -21,6 +21,8 @@ from common import (L_ANK, L_ELB, L_HIP, L_KNE, L_SHO, L_WRI, NOSE, R_ANK, R_ELB
 
 RULES = read_json(SKILL_DIR / "references" / "rules.json")
 SIDE = {"L": (L_SHO, L_ELB, L_WRI), "R": (R_SHO, R_ELB, R_WRI)}
+RELEASE_DEPENDENT = {"elbow_release_deg", "release_height_torso", "dip_to_release_s", "release_vs_apex_s",
+                     "follow_through_s", "trunk_lean_release_deg"}
 # jump-shot mechanics that do not apply to a layup
 LAYUP_SKIP = {"knee_flex_min_deg", "elbow_set_deg", "dip_to_release_s", "release_vs_apex_s",
               "landing_drift_torso", "follow_through_s", "elbow_alignment_ratio", "launch_angle_deg"}
@@ -175,6 +177,11 @@ def analyze_shot(c: Ctx, ev: dict) -> tuple[list, dict, dict]:
         metric("shot", "launch_angle_deg", launch, v,
                {"ball_points": n_pts} if n_pts else {"note": "ball not tracked after release"}),
     ]
+    if ev.get("release_estimated"):
+        for mm in ms:
+            if mm["key"] in RELEASE_DEPENDENT and mm["status"] != "n/a":
+                mm["reliable"] = False
+                mm["note"] = "release frame estimated from ball flight (hands not visible); approximate"
     if kind == "layup":
         for mm in ms:
             if mm["key"] in LAYUP_SKIP:

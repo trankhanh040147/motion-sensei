@@ -188,11 +188,57 @@ def detect_shots(kp, ball, torso, fps):
                     break
         if release is None:
             release = a + int(np.argmax(wrist_high[a:b + 1]))
-        if shots and release - shots[-1]["release"] < round(1.2 * fps):
-            continue
         shots.append({"release": int(release), "evidence": evidence,
                       "peak_wrist_over_head": round(float(wrist_high[a:b + 1].max()), 2)})
-    return shots
+
+    # Ball-flight trigger: catches shots where the shooting wrist is hidden (camera behind
+    # the player) but the ball is clearly seen rising well above the head.
+    sho = mid(kp, L_SHO, R_SHO)
+    sho_x = sho[:, 0].copy()  # hold last known body x through pose dropouts (jumps blur)
+    for i in range(1, len(sho_x)):
+        if np.isnan(sho_x[i]):
+            sho_x[i] = sho_x[i - 1]
+    ball_high = np.nan_to_num((nose_y - ball[:, 1]) / torso, nan=-9)
+    for a, b in runs_of(ball_high > 0.5, round(0.4 * fps), 2):
+        if ball_high[a:b + 1].max() < 0.8:
+            continue
+        # must find the ball still in the hands at head height just before the flight,
+        # otherwise it is a rebound / ball off the wall, not this player's shot
+        release = None
+        for f in range(a, max(0, a - round(0.5 * fps)), -1):
+            if np.isnan(ball[f, 0]):
+                continue
+            d_wr = np.nanmin([np.linalg.norm(ball[f, :2] - kp[f, w, :2]) for w in (L_WRI, R_WRI)]) / torso
+            d_sh = np.linalg.norm(ball[f, :2] - sho[f]) / torso
+            if (d_wr < 0.9 or d_sh < 1.0) and ball_high[f] > -0.4:
+                release = f
+                break
+        if release is None:
+            # ball first seen already in flight (hands hidden / pose lost mid-jump):
+            # accept only if it rises straight above the body, not beside it
+            vis = [f for f in range(a, b + 1) if not np.isnan(ball[f, 0])][:4]
+            if len(vis) < 2 or np.isnan(sho_x[vis[0]]):
+                continue
+            dx = abs(ball[vis[0], 0] - sho_x[vis[0]]) / torso
+            rising = ball[vis[-1], 1] < ball[vis[0], 1]
+            if dx > 0.8 or not rising:
+                continue
+            release = max(0, vis[0] - 2)
+            estimated = True
+        else:
+            estimated = False
+        shots.append({"release": int(release), "evidence": "ball_flight", "release_estimated": estimated,
+                      "peak_wrist_over_head": round(float(wrist_high[a:b + 1].max()), 2)})
+
+    rank = {"ball_leaves_hand": 0, "ball_flight": 1, "wrist_peak": 2}
+    merged = []
+    for s in sorted(shots, key=lambda s: s["release"]):
+        if merged and s["release"] - merged[-1]["release"] < round(1.2 * fps):
+            if rank[s["evidence"]] < rank[merged[-1]["evidence"]]:
+                merged[-1] = s
+            continue
+        merged.append(s)
+    return merged
 
 
 def detect_dribbles(kp, ball, torso, fps, blocked: np.ndarray):
@@ -252,8 +298,8 @@ def main() -> None:
         blocked[st:en + 1] = True
         events.append({"id": f"shot_{i + 1:02d}", "type": "shot", "start_frame": st, "end_frame": en,
                        "release_frame": s["release"], "t_release_s": round(s["release"] / fps + off, 2),
-                       "detection": s["evidence"],
-                       "confidence": "high" if s["evidence"] == "ball_leaves_hand" else "medium",
+                       "detection": s["evidence"], "release_estimated": s.get("release_estimated", False),
+                       "confidence": "medium" if s["evidence"] == "wrist_peak" else "high",
                        "peak_wrist_over_head_torso": s["peak_wrist_over_head"]})
     for i, seq in enumerate(detect_dribbles(kp, ball, torso, fps, blocked)):
         st, en = max(0, seq[0] - round(0.3 * fps)), min(F - 1, seq[-1] + round(0.3 * fps))
