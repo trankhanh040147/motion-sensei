@@ -1,0 +1,13 @@
+[project]
+name = "motion-sensei"
+version = "0.1.0"
+description = "Video-based basketball form analysis for agent harnesses"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "ultralytics>=8.3.0",
+    "opencv-python>=4.9",
+    "numpy>=1.26",
+]
+
+[tool.uv]
+package = false
