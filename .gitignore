@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+runs/
+models/*.pt
+*.mp4
+*.mov
+!skills/**/examples/*.mp4
+.DS_Store

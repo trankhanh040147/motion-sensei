@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Entry point: ms <command> [args]. Commands: prepare extract segment analyze aggregate dashboard people status run-all setup
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+cmd="${1:?usage: ms <prepare|extract|segment|analyze|aggregate|dashboard|people|status|run-all|setup> [args]}"; shift
+if [ "$cmd" = "setup" ]; then exec "$SCRIPT_DIR/setup.sh"; fi
+[ -x "$ROOT/.venv/bin/python" ] || "$SCRIPT_DIR/setup.sh" >&2
+export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
+exec "$ROOT/.venv/bin/python" "$SCRIPT_DIR/${cmd//-/_}.py" "$@"
