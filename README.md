@@ -36,7 +36,7 @@ This links the skill into `~/.agents/skills` and `~/.claude/skills`, creates a P
 skills/basketball-form-coach/scripts/ms run-all path/to/practice.mp4
 ```
 
-The output lands in `runs/<video>-<timestamp>/report.html`. The visual review and coach notes need an agent (see SKILL.md).
+The output lands in `runs/<video>-<timestamp>/`. Open `dashboard.html` there to replay every detected shot from the timeline, with its review and measurements. The visual review and coach notes need an agent (see SKILL.md).
 
 ## Models
 

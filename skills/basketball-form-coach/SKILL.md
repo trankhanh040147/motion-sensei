@@ -21,7 +21,7 @@ Every phase reads and writes files in one run dir. No phase needs another agent'
 | 1 Extract | extractor ×N | `ms extract --run-dir R --chunk i` | `chunks/i/frames.jsonl`, `DONE.json` | **yes, per chunk** |
 | 2 Segment | lead | `ms segment --run-dir R` | `timeline.npz`, `events.json` | - (seconds) |
 | 3 Analyze + review | analyst ×M | `ms analyze --run-dir R --events a,b,c` then visual review | `events/<id>/metrics.json`, `keyframes.jpg`, `overlay.mp4`, **`review.json`** | **yes, per event batch** |
-| 4 Report | lead | `ms aggregate`, write `coach_notes.md`, `ms aggregate` again | `summary.json`, `report.html` | - |
+| 4 Report | lead | `ms aggregate`, write `coach_notes.md`, `ms aggregate` again, `ms dashboard` | `summary.json`, `report.html`, `dashboard.html` | - |
 
 `ms status --run-dir R` prints the current phase, per-chunk progress (done / total / fps / ETA) and the exact commands that can run now. Use it instead of guessing; it is also how a resumed or new lead picks up a half-finished run.
 
@@ -38,7 +38,8 @@ Each command prints JSON. `prepare` and `segment` print `parallel_tasks`: one co
 3. **Segment.** `ms segment --run-dir R`. Read `warnings` (view, ball visibility, athlete visibility). If 0 events, stop and tell the user why (see `references/filming-guide.md`).
 4. **Fan out analysis.** One analyst per `parallel_tasks` entry (default 3 events each; change with `segment --batch-size`). Analysts need vision. Give each the brief in "Analyst brief" below. They write only inside their own `events/<id>/` dirs, so they cannot conflict.
 5. **Aggregate.** `ms aggregate --run-dir R` → `summary.json`. Read it plus every `review.json`.
-6. **Coach notes.** Write `R/coach_notes.md` (format below), then run `ms aggregate` again to embed it in `report.html`. Reply to the user with the notes and the report path.
+6. **Coach notes.** Write `R/coach_notes.md` (format below), then run `ms aggregate` again to embed it in `report.html`.
+7. **Dashboard.** `ms dashboard --run-dir R` → `R/dashboard.html`: the video with a clickable timeline of every event (colour = confirmed issue / possible / good / invalid / not reviewed), per-event review, key frames, metrics with verdicts and a looping skeleton replay; 0.25×–2× speed and frame stepping. It opens straight from disk (no server, nothing uploaded) and works on partial runs, so it can be rebuilt any time. Reply to the user with the notes and the `dashboard.html` path (deep link to one event: `dashboard.html#shot_12`).
 
 **Stopping a run.** Tell every worker to stop and not retry, then `pkill -f "basketball-form-coach/scripts/"`. Nothing is lost: re-running the same commands later resumes. Do not launch detached/`setsid` processes; they outlive the team and keep the GPU busy.
 
